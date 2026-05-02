@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@source "../**/*.{js,ts,jsx,tsx}";
+
+:root {
+  --cream: #faf6ef;
+  --cream-muted: #f0ebe3;
+  --cobalt: #0b3b8c;
+  --cobalt-hover: #0a3275;
+  --cobalt-muted: #1e5cb3;
+  --ink: #1a1f2e;
+  --ink-muted: #5c6478;
+  --cam-dot: #0b3b8c;
+  --cam-dot-stroke: #072a66;
+  --user-pulse: #e63946;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--cream);
+  color: var(--ink);
+}
+
+.leaflet-container {
+  background: var(--cream-muted);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+@keyframes caught-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.caught-toast {
+  animation: caught-toast-in 0.35s ease-out forwards;
+}
+
+.font-mono-caught {
+  font-family: var(--font-mono), ui-monospace, monospace;
+}

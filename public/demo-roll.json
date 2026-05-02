@@ -1,0 +1,28 @@
+{
+  "entries": [
+    {
+      "cameraId": "300e0508-3c7e-4ac5-8527-b75bcf8292b8",
+      "label": "Hillside Ave @ Little Neck Pkwy",
+      "capturedAt": 1777731226101,
+      "imagePath": "/demo/1.jpg"
+    },
+    {
+      "cameraId": "ec9eda79-e250-4e6f-a8f6-e51021fb054f",
+      "label": "Amsterdam Ave @ 60 St",
+      "capturedAt": 1777731706101,
+      "imagePath": "/demo/2.jpg"
+    },
+    {
+      "cameraId": "1b3248f9-f26e-4f36-943f-b7a7731595fb",
+      "label": "QBB @ Crescent St",
+      "capturedAt": 1777732186101,
+      "imagePath": "/demo/3.jpg"
+    },
+    {
+      "cameraId": "8a6bc417-4877-4ebe-8052-88c1b261baf1",
+      "label": "Central Park West @ 86 St",
+      "capturedAt": 1777732666101,
+      "imagePath": "/demo/4.jpg"
+    }
+  ]
+}
