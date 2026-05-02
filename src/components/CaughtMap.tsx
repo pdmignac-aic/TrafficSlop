@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CircleMarker, MapContainer, TileLayer, useMap } from "react-leaflet";
+import { CircleMarker, MapContainer, Polyline, TileLayer, useMap } from "react-leaflet";
 import type { Camera } from "@/lib/cameras";
+import type { CameraMaxxingResult } from "@/lib/route-planning";
 
 import "leaflet/dist/leaflet.css";
 
@@ -16,6 +17,7 @@ type Props = {
   user: { lat: number; lng: number } | null;
   selectedCameraId?: string | null;
   onCameraSelect?: (camera: Camera) => void;
+  routePlan?: CameraMaxxingResult | null;
 };
 
 function Recenter({ user }: { user: { lat: number; lng: number } | null }) {
@@ -27,7 +29,7 @@ function Recenter({ user }: { user: { lat: number; lng: number } | null }) {
   return null;
 }
 
-export default function CaughtMap({ cameras, user, selectedCameraId, onCameraSelect }: Props) {
+export default function CaughtMap({ cameras, user, selectedCameraId, onCameraSelect, routePlan }: Props) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -37,6 +39,11 @@ export default function CaughtMap({ cameras, user, selectedCameraId, onCameraSel
     if (user) return [user.lat, user.lng] as [number, number];
     return [40.758, -73.9855] as [number, number];
   }, [user]);
+
+  const waypointIds = useMemo(
+    () => new Set((routePlan?.waypointCameras ?? []).map((cam) => cam.id)),
+    [routePlan],
+  );
 
   if (!mounted) {
     return (
@@ -62,16 +69,28 @@ export default function CaughtMap({ cameras, user, selectedCameraId, onCameraSel
         subdomains="abcd"
         maxZoom={20}
       />
+      {routePlan?.normal.geometry.length ? (
+        <Polyline
+          positions={routePlan.normal.geometry.map((p) => [p.lat, p.lng])}
+          pathOptions={{ color: "#5c6478", weight: 4, opacity: 0.38 }}
+        />
+      ) : null}
+      {routePlan?.maxxed.geometry.length ? (
+        <Polyline
+          positions={routePlan.maxxed.geometry.map((p) => [p.lat, p.lng])}
+          pathOptions={{ color: COBALT, weight: 5, opacity: 0.88 }}
+        />
+      ) : null}
       {cameras.map((c) => (
         <CircleMarker
           key={c.id}
           center={[c.latitude, c.longitude]}
-          radius={selectedCameraId === c.id ? 8 : 5}
+          radius={selectedCameraId === c.id ? 8 : waypointIds.has(c.id) ? 7 : 5}
           pathOptions={{
             color: COBALT_STROKE,
-            weight: selectedCameraId === c.id ? 3 : 1.5,
-            fillColor: selectedCameraId === c.id ? USER_CORE : COBALT,
-            fillOpacity: selectedCameraId === c.id ? 1 : 0.92,
+            weight: selectedCameraId === c.id || waypointIds.has(c.id) ? 3 : 1.5,
+            fillColor: selectedCameraId === c.id ? USER_CORE : waypointIds.has(c.id) ? "#15a36d" : COBALT,
+            fillOpacity: selectedCameraId === c.id || waypointIds.has(c.id) ? 1 : 0.92,
           }}
           eventHandlers={{
             click: () => onCameraSelect?.(c),

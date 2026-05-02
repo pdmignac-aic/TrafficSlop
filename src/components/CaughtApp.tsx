@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import CameraMaxxingPanel from "@/components/CameraMaxxingPanel";
 import CaughtMap from "@/components/CaughtMap";
 import type { Camera } from "@/lib/cameras";
 import { fetchCameraList, imageProxyUrl } from "@/lib/cameras";
 import { haversineMeters, nearestCamera } from "@/lib/geo";
 import { buildMontageBlob } from "@/lib/montage";
+import type { CameraMaxxingResult } from "@/lib/route-planning";
 import { createBrowserSupabase } from "@/lib/supabase/browser";
 import { addRollEntry, loadRoll, replaceRoll, type RollEntry } from "@/lib/roll";
 
@@ -60,6 +62,7 @@ export default function CaughtApp() {
   const [commuteBusy, setCommuteBusy] = useState(false);
   const [selectedCamera, setSelectedCamera] = useState<Camera | null>(null);
   const [selectedCaptureBusy, setSelectedCaptureBusy] = useState(false);
+  const [cameraMaxxingRoute, setCameraMaxxingRoute] = useState<CameraMaxxingResult | null>(null);
   const [publishFor, setPublishFor] = useState<RollEntry | null>(null);
   const [myCompanies, setMyCompanies] = useState<{ id: string; name: string; slug: string }[]>([]);
   const commuteIdRef = useRef<string | null>(null);
@@ -549,6 +552,7 @@ export default function CaughtApp() {
         user={user}
         selectedCameraId={selectedCamera?.id ?? null}
         onCameraSelect={setSelectedCamera}
+        routePlan={cameraMaxxingRoute}
       />
 
       {selectedCamera ? (
@@ -595,6 +599,14 @@ export default function CaughtApp() {
           ) : null}
         </div>
       </div>
+
+      <CameraMaxxingPanel
+        origin={user}
+        routePlan={cameraMaxxingRoute}
+        onRoutePlan={setCameraMaxxingRoute}
+        onBeginMaxxedCommute={() => void startCommute()}
+        commuteActive={catching || Boolean(activeCommuteId)}
+      />
 
       <div className="mt-6 flex flex-wrap gap-3">
         <button
