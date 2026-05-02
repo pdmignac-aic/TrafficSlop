@@ -367,7 +367,8 @@ export default function CaughtApp() {
 
   const startCommute = async () => {
     if (!HAS_CLOUD) {
-      pushToast("Sign in + Supabase required for commute email.");
+      setCatching(true);
+      pushToast("Commute started locally — sign in + Supabase enables email.");
       return;
     }
     setCommuteBusy(true);
@@ -376,7 +377,8 @@ export default function CaughtApp() {
       if (!r.ok) throw new Error("start failed");
       const j = (await r.json()) as { commute: { id: string } };
       setActiveCommuteId(j.commute.id);
-      pushToast("Commute started — new captures attach to this run.");
+      setCatching(true);
+      pushToast("Commute started — live capture is on.");
     } catch {
       setStatus("commute start failed");
     } finally {
@@ -385,7 +387,11 @@ export default function CaughtApp() {
   };
 
   const endCommuteEmail = async () => {
-    if (!activeCommuteId) return;
+    setCatching(false);
+    if (!activeCommuteId) {
+      pushToast("Commute stopped.");
+      return;
+    }
     if (!HAS_CLOUD) return;
     setCommuteBusy(true);
     try {
@@ -503,8 +509,9 @@ export default function CaughtApp() {
       </div>
 
       <p className="mb-4 text-xs leading-relaxed text-[#5c6478]">
-        Keep this tab open on iPhone. Near a cam you&apos;ll get a heads-up, then up to{" "}
-        {SHOTS_PER_PASS} frames per pass while you stay in range (~{CAPTURE_RADIUS_M}m).
+        Tap Begin commute before you walk. Keep this tab open on iPhone. Near a cam you&apos;ll
+        get a heads-up, then up to {SHOTS_PER_PASS} frames per pass while you stay in range (~
+        {CAPTURE_RADIUS_M}m).
       </p>
 
       {camerasError ? (
@@ -518,51 +525,38 @@ export default function CaughtApp() {
 
       <CaughtMap cameras={cameras} user={user} />
 
-      {HAS_CLOUD ? (
-        <div className="mt-4 rounded-xl border border-[#0b3b8c]/15 bg-white/80 p-4">
-          <p className="mb-2 text-xs font-semibold text-[#0b3b8c]">Commute & email</p>
-          <p className="mb-3 text-[11px] leading-relaxed text-[#5c6478]">
-            Start a commute before you walk; end it when you arrive. We email every frame from that
-            run to your account email (needs Resend API key on the server).
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={commuteBusy || Boolean(activeCommuteId)}
-              onClick={() => void startCommute()}
-              className="rounded-lg bg-[#0b3b8c] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"
-            >
-              Begin commute
-            </button>
-            <button
-              type="button"
-              disabled={commuteBusy || !activeCommuteId}
-              onClick={() => void endCommuteEmail()}
-              className="rounded-lg border border-[#0b3b8c]/30 px-3 py-2 text-xs font-semibold text-[#0b3b8c] disabled:opacity-40"
-            >
-              End & email commute
-            </button>
-            {activeCommuteId ? (
-              <span className="self-center font-mono-caught text-[10px] text-[#5c6478]">
-                active run
-              </span>
-            ) : null}
-          </div>
+      <div className="mt-4 rounded-xl border border-[#0b3b8c]/15 bg-white/80 p-4">
+        <p className="mb-2 text-xs font-semibold text-[#0b3b8c]">Commute mode</p>
+        <p className="mb-3 text-[11px] leading-relaxed text-[#5c6478]">
+          Begin commute starts live GPS tracking and traffic-cam capture. End commute stops capture
+          and emails this run to your account.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={commuteBusy || catching || Boolean(activeCommuteId)}
+            onClick={() => void startCommute()}
+            className="rounded-lg bg-[#0b3b8c] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"
+          >
+            Begin commute
+          </button>
+          <button
+            type="button"
+            disabled={commuteBusy || (!catching && !activeCommuteId)}
+            onClick={() => void endCommuteEmail()}
+            className="rounded-lg border border-[#0b3b8c]/30 px-3 py-2 text-xs font-semibold text-[#0b3b8c] disabled:opacity-40"
+          >
+            End commute
+          </button>
+          {catching || activeCommuteId ? (
+            <span className="self-center font-mono-caught text-[10px] text-[#5c6478]">
+              {catching ? "live capture active" : "email pending"}
+            </span>
+          ) : null}
         </div>
-      ) : null}
+      </div>
 
       <div className="mt-6 flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={() => setCatching((c) => !c)}
-          className={`rounded-xl px-5 py-3 text-sm font-semibold transition ${
-            catching
-              ? "border-2 border-[#0b3b8c] bg-white text-[#0b3b8c] hover:bg-[#faf6ef]"
-              : "bg-[#0b3b8c] text-white shadow-md shadow-[#0b3b8c]/25 hover:bg-[#0a3275]"
-          }`}
-        >
-          {catching ? "Stop catching" : "Start catching"}
-        </button>
         <button
           type="button"
           disabled={montageBusy || roll.length === 0}
