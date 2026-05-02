@@ -52,7 +52,7 @@ function osrmUrl(points: RoutePoint[]) {
 
 async function fetchOsrmRoute(points: RoutePoint[]): Promise<OsrmRoute> {
   const res = await fetch(osrmUrl(points), {
-    headers: { "User-Agent": "CaughtCameraMaxxing/0.1 (local demo)" },
+    headers: { "User-Agent": "TrafficSlopCameraMaxxing/0.1 (local demo)" },
     next: { revalidate: 60 },
   });
   if (!res.ok) {

@@ -7,7 +7,7 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
       <nav className="sticky top-0 z-50 border-b border-[#0b3b8c]/10 bg-[#faf6ef]/95 px-4 py-3 backdrop-blur">
         <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
           <Link href="/" className="text-sm font-semibold text-[#0b3b8c]">
-            Caught
+            Traffic Slop
           </Link>
           <div className="flex items-center gap-4">
             <Link

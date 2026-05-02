@@ -44,7 +44,7 @@ export default function MontagesPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `caught-${preset}.webm`;
+      a.download = `traffic-slop-${preset}.webm`;
       a.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
       setStatus("saved");

@@ -81,7 +81,7 @@ export default function FeedView({
     <div className="mx-auto flex max-w-lg flex-col px-4 pb-24 pt-6">
       <div className="mb-6">
         <Link href="/" className="text-xs text-[#0b3b8c]">
-          ← Back to Caught
+          ← Back to Traffic Slop
         </Link>
         <h1 className="mt-2 text-xl font-semibold text-[#1a1f2e]">{title}</h1>
         <p className="mt-1 text-xs text-[#5c6478]">

@@ -37,7 +37,7 @@ export default function LoginPage() {
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6 py-12">
       <h1 className="mb-2 text-2xl font-semibold text-[#1a1f2e]">Sign in</h1>
-      <p className="mb-8 text-sm text-[#5c6478]">Caught — your commute, on camera.</p>
+      <p className="mb-8 text-sm text-[#5c6478]">Traffic Slop — your commute, on camera.</p>
       <form onSubmit={(e) => void onSubmit(e)} className="space-y-4">
         <label className="block text-sm font-medium text-[#1a1f2e]">
           Email

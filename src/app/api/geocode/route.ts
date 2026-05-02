@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
 
     const res = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
       headers: {
-        "User-Agent": "CaughtCameraMaxxing/0.1 (local demo)",
+        "User-Agent": "TrafficSlopCameraMaxxing/0.1 (local demo)",
         Accept: "application/json",
       },
       next: { revalidate: 60 * 60 },

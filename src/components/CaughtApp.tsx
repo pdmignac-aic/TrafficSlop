@@ -17,7 +17,7 @@ const HAS_CLOUD =
 
 /** Inside this radius we burst-capture up to SHOTS_PER_PASS frames. */
 const CAPTURE_RADIUS_M = 75;
-/** Wider ring: first time you enter, we toast "about to be Caught". */
+/** Wider ring: first time you enter, we toast a traffic-cam warning. */
 const WARN_RADIUS_M = 140;
 /** Leave this far before a camera pass resets (avoids flicker at the edge). */
 const PASS_RESET_BEYOND_M = 98;
@@ -257,7 +257,7 @@ export default function CaughtApp() {
         .sort((a, b) => a.d - b.d)[0];
       if (warnHit && !warned.has(warnHit.cam.id)) {
         warned.add(warnHit.cam.id);
-        pushToast(`You're about to be Caught — ${warnHit.cam.name}`);
+        pushToast(`Traffic Slop is about to see you — ${warnHit.cam.name}`);
       }
 
       const inRange = cams
@@ -280,7 +280,7 @@ export default function CaughtApp() {
           await captureFrame(cam);
           const t = Date.now();
           pass[cam.id] = { count: p.count + 1, lastAt: t };
-          setStatus(`caught ${p.count + 1}/${SHOTS_PER_PASS}`);
+          setStatus(`traffic slopped ${p.count + 1}/${SHOTS_PER_PASS}`);
           window.setTimeout(() => setStatus(""), 1400);
         } catch {
           setStatus("capture failed");
@@ -363,7 +363,7 @@ export default function CaughtApp() {
         setStatus(`manual ${i + 1}/${SHOTS_PER_PASS}`);
         if (i < SHOTS_PER_PASS - 1) await sleep(BURST_GAP_MS);
       }
-      setStatus("caught");
+      setStatus("traffic slopped");
       window.setTimeout(() => setStatus(""), 1600);
     } catch {
       setStatus("manual catch failed");
@@ -445,7 +445,7 @@ export default function CaughtApp() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `caught-montage.webm`;
+      a.download = `traffic-slop-montage.webm`;
       a.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
       setStatus("saved");
@@ -503,7 +503,7 @@ export default function CaughtApp() {
 
       <header className="mb-8 space-y-2">
         <p className="text-[11px] font-semibold uppercase tracking-[0.4em] text-[#0b3b8c]/80">
-          Caught
+          Traffic Slop
         </p>
         <h1 className="text-2xl font-semibold tracking-tight text-[#1a1f2e]">
           Street footage you didn&apos;t shoot.

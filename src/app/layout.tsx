@@ -15,7 +15,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Caught",
+  title: "Traffic Slop",
   description: "The cams are watching. Now you have the footage.",
 };
 
