@@ -58,6 +58,8 @@ export default function CaughtApp() {
   const [geoDenied, setGeoDenied] = useState(false);
   const [activeCommuteId, setActiveCommuteId] = useState<string | null>(null);
   const [commuteBusy, setCommuteBusy] = useState(false);
+  const [selectedCamera, setSelectedCamera] = useState<Camera | null>(null);
+  const [selectedCaptureBusy, setSelectedCaptureBusy] = useState(false);
   const [publishFor, setPublishFor] = useState<RollEntry | null>(null);
   const [myCompanies, setMyCompanies] = useState<{ id: string; name: string; slug: string }[]>([]);
   const commuteIdRef = useRef<string | null>(null);
@@ -365,6 +367,25 @@ export default function CaughtApp() {
     }
   };
 
+  const captureSelectedCamera = async (burst: boolean) => {
+    if (!selectedCamera) return;
+    setSelectedCaptureBusy(true);
+    try {
+      const total = burst ? SHOTS_PER_PASS : 1;
+      for (let i = 0; i < total; i++) {
+        await captureFrame(selectedCamera);
+        setStatus(burst ? `selected ${i + 1}/${total}` : "captured selected cam");
+        if (i < total - 1) await sleep(BURST_GAP_MS);
+      }
+      pushToast(burst ? `Auto-captured ${total} frames from ${selectedCamera.name}` : "Captured.");
+      window.setTimeout(() => setStatus(""), 1600);
+    } catch {
+      setStatus("selected capture failed");
+    } finally {
+      setSelectedCaptureBusy(false);
+    }
+  };
+
   const startCommute = async () => {
     if (!HAS_CLOUD) {
       setCatching(true);
@@ -523,7 +544,26 @@ export default function CaughtApp() {
         </p>
       ) : null}
 
-      <CaughtMap cameras={cameras} user={user} />
+      <CaughtMap
+        cameras={cameras}
+        user={user}
+        selectedCameraId={selectedCamera?.id ?? null}
+        onCameraSelect={setSelectedCamera}
+      />
+
+      {selectedCamera ? (
+        <CameraInspector
+          camera={selectedCamera}
+          busy={selectedCaptureBusy}
+          onClose={() => setSelectedCamera(null)}
+          onCapture={() => void captureSelectedCamera(false)}
+          onAutoCapture={() => void captureSelectedCamera(true)}
+        />
+      ) : (
+        <p className="mt-3 text-[11px] text-[#5c6478]">
+          Tap any cobalt camera dot to preview that live DOT still and capture from it directly.
+        </p>
+      )}
 
       <div className="mt-4 rounded-xl border border-[#0b3b8c]/15 bg-white/80 p-4">
         <p className="mb-2 text-xs font-semibold text-[#0b3b8c]">Commute mode</p>
@@ -789,5 +829,85 @@ function PublishForm({
         </button>
       </div>
     </div>
+  );
+}
+
+function CameraInspector({
+  camera,
+  busy,
+  onClose,
+  onCapture,
+  onAutoCapture,
+}: {
+  camera: Camera;
+  busy: boolean;
+  onClose: () => void;
+  onCapture: () => void;
+  onAutoCapture: () => void;
+}) {
+  const [tick, setTick] = useState(Date.now());
+
+  useEffect(() => {
+    setTick(Date.now());
+    const id = window.setInterval(() => setTick(Date.now()), 2500);
+    return () => window.clearInterval(id);
+  }, [camera.id]);
+
+  return (
+    <section className="mt-4 overflow-hidden rounded-2xl border border-[#0b3b8c]/15 bg-white shadow-sm">
+      <div className="flex items-start justify-between gap-3 border-b border-[#1a1f2e]/8 px-4 py-3">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#0b3b8c]/70">
+            Camera view
+          </p>
+          <h2 className="mt-1 text-sm font-semibold text-[#1a1f2e]">{camera.name}</h2>
+          <p className="font-mono-caught mt-1 text-[10px] text-[#5c6478]">
+            {camera.latitude.toFixed(5)}, {camera.longitude.toFixed(5)}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-full border border-[#1a1f2e]/10 px-2 py-1 text-[10px] font-semibold text-[#5c6478]"
+        >
+          Close
+        </button>
+      </div>
+
+      <div className="bg-[#f0ebe3] p-3">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`${imageProxyUrl(camera.id)}?t=${tick}`}
+          alt={`Live traffic camera still for ${camera.name}`}
+          className="mx-auto max-h-64 w-full object-contain"
+          style={{ imageRendering: "pixelated" }}
+        />
+      </div>
+
+      <div className="space-y-2 px-4 py-3">
+        <p className="text-[11px] leading-relaxed text-[#5c6478]">
+          This preview refreshes every few seconds. Captures here work outside commute mode and save
+          to your roll without requiring GPS proximity.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onCapture}
+            className="rounded-lg bg-[#0b3b8c] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"
+          >
+            Capture this view
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onAutoCapture}
+            className="rounded-lg border border-[#0b3b8c]/30 px-3 py-2 text-xs font-semibold text-[#0b3b8c] disabled:opacity-40"
+          >
+            Auto-capture ×{SHOTS_PER_PASS}
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }

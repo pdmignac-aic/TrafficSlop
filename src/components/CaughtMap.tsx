@@ -14,6 +14,8 @@ const USER_RING = "#0b3b8c";
 type Props = {
   cameras: Camera[];
   user: { lat: number; lng: number } | null;
+  selectedCameraId?: string | null;
+  onCameraSelect?: (camera: Camera) => void;
 };
 
 function Recenter({ user }: { user: { lat: number; lng: number } | null }) {
@@ -25,7 +27,7 @@ function Recenter({ user }: { user: { lat: number; lng: number } | null }) {
   return null;
 }
 
-export default function CaughtMap({ cameras, user }: Props) {
+export default function CaughtMap({ cameras, user, selectedCameraId, onCameraSelect }: Props) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -64,12 +66,15 @@ export default function CaughtMap({ cameras, user }: Props) {
         <CircleMarker
           key={c.id}
           center={[c.latitude, c.longitude]}
-          radius={5}
+          radius={selectedCameraId === c.id ? 8 : 5}
           pathOptions={{
             color: COBALT_STROKE,
-            weight: 1.5,
-            fillColor: COBALT,
-            fillOpacity: 0.92,
+            weight: selectedCameraId === c.id ? 3 : 1.5,
+            fillColor: selectedCameraId === c.id ? USER_CORE : COBALT,
+            fillOpacity: selectedCameraId === c.id ? 1 : 0.92,
+          }}
+          eventHandlers={{
+            click: () => onCameraSelect?.(c),
           }}
         />
       ))}
