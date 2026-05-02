@@ -87,6 +87,49 @@ export default function ProfilePage() {
     }
   };
 
+  const syncSelectedToCloud = async () => {
+    if (!selected || selected.dbId) return;
+    setBusy(true);
+    setStatus("");
+    try {
+      const res = await fetch("/api/captures/from-data-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          data_url: selected.imageDataUrl,
+          camera_id: selected.cameraId,
+          label: selected.label,
+          captured_at: selected.capturedAt,
+        }),
+      });
+      const json = (await res.json()) as {
+        id?: string;
+        public_url?: string;
+        captured_at?: number;
+        error?: string;
+      };
+      if (!res.ok || !json.id || !json.public_url) throw new Error(json.error ?? "sync failed");
+
+      const updated: ProfilePhoto = {
+        ...selected,
+        key: json.id,
+        dbId: json.id,
+        imageDataUrl: json.public_url,
+        capturedAt: json.captured_at ?? selected.capturedAt,
+        source: "cloud",
+      };
+      setSelected(updated);
+      setPhotos((prev) =>
+        [updated, ...prev.filter((p) => p.key !== selected.key)].sort((a, b) => b.capturedAt - a.capturedAt),
+      );
+      setStatus("Synced to cloud. You can publish it now.");
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "Cloud sync failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <main className="mx-auto max-w-lg px-4 pb-16 pt-8">
       <p className="text-[11px] font-semibold uppercase tracking-[0.4em] text-[#0b3b8c]/80">
@@ -177,14 +220,25 @@ export default function ProfilePage() {
               style={{ imageRendering: "pixelated" }}
             />
             <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                disabled={busy || !selected.dbId}
-                onClick={() => void publishSelected()}
-                className="flex-1 rounded-xl bg-[#0b3b8c] px-4 py-3 text-sm font-semibold text-white disabled:opacity-40"
-              >
-                Send to feed
-              </button>
+              {selected.dbId ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void publishSelected()}
+                  className="flex-1 rounded-xl bg-[#0b3b8c] px-4 py-3 text-sm font-semibold text-white disabled:opacity-40"
+                >
+                  Send to feed
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void syncSelectedToCloud()}
+                  className="flex-1 rounded-xl bg-[#0b3b8c] px-4 py-3 text-sm font-semibold text-white disabled:opacity-40"
+                >
+                  Sync to cloud
+                </button>
+              )}
               <a
                 href={selected.imageDataUrl}
                 target="_blank"
@@ -196,8 +250,7 @@ export default function ProfilePage() {
             </div>
             {!selected.dbId ? (
               <p className="mt-3 text-xs leading-relaxed text-[#a36b00]">
-                This one is local-only, usually because cloud saving failed. It is visible on this
-                device but cannot be published to the feed.
+                This one is local-only. Sync it to cloud first, then you can send it to the feed.
               </p>
             ) : null}
           </div>

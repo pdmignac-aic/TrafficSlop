@@ -5,19 +5,32 @@ import { createServerSupabase } from "@/lib/supabase/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function parseDataUrl(dataUrl: string) {
+  const match = dataUrl.match(/^data:(image\/(?:jpeg|jpg|png|webp));base64,(.+)$/);
+  if (!match) return null;
+  return {
+    contentType: match[1] === "image/jpg" ? "image/jpeg" : match[1],
+    buffer: Buffer.from(match[2], "base64"),
+  };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as {
+      data_url?: string;
       camera_id?: string;
       label?: string;
-      commute_id?: string | null;
+      captured_at?: number;
     };
-    const cameraId = body.camera_id;
-    const label = body.label?.trim() || "Traffic camera";
 
-    if (!cameraId || !/^[0-9a-f-]{36}$/i.test(cameraId)) {
-      return NextResponse.json({ error: "valid camera_id required" }, { status: 400 });
+    const parsed = body.data_url ? parseDataUrl(body.data_url) : null;
+    if (!parsed) {
+      return NextResponse.json({ error: "valid image data_url required" }, { status: 400 });
     }
+
+    const cameraId = body.camera_id || "local";
+    const label = body.label?.trim() || "Traffic camera";
+    const capturedAt = Number.isFinite(body.captured_at) ? Number(body.captured_at) : Date.now();
 
     const supabase = await createServerSupabase();
     const writeClient = createAdminSupabase() ?? supabase;
@@ -29,35 +42,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     }
 
-    const imageRes = await fetch(`https://webcams.nyctmc.org/api/cameras/${cameraId}/image`, {
-      cache: "no-store",
-      headers: { Accept: "image/*" },
-    });
-    if (!imageRes.ok) {
-      return NextResponse.json({ error: "camera image unavailable" }, { status: 502 });
-    }
-
-    const now = Date.now();
-    const contentType = imageRes.headers.get("content-type") || "image/jpeg";
-    const imageBuffer = await imageRes.arrayBuffer();
-    const storagePath = `${user.id}/${crypto.randomUUID()}.jpg`;
-
-    if (body.commute_id) {
-      const { data: commute } = await supabase
-        .from("commutes")
-        .select("id, user_id")
-        .eq("id", body.commute_id)
-        .maybeSingle();
-      if (!commute || commute.user_id !== user.id) {
-        return NextResponse.json({ error: "invalid commute_id" }, { status: 400 });
-      }
-    }
+    const ext = parsed.contentType === "image/png" ? "png" : parsed.contentType === "image/webp" ? "webp" : "jpg";
+    const storagePath = `${user.id}/${crypto.randomUUID()}.${ext}`;
 
     const { error: uploadErr } = await writeClient.storage
       .from("captures")
-      .upload(storagePath, imageBuffer, { contentType, upsert: false });
+      .upload(storagePath, parsed.buffer, { contentType: parsed.contentType, upsert: false });
     if (uploadErr) {
-      console.error("[capture-from-camera upload]", uploadErr);
       return NextResponse.json({ error: `Storage upload failed: ${uploadErr.message}` }, { status: 500 });
     }
 
@@ -67,15 +58,12 @@ export async function POST(req: NextRequest) {
       .insert({
         id: captureId,
         user_id: user.id,
-        commute_id: body.commute_id || null,
         camera_id: cameraId,
         label,
         storage_path: storagePath,
-        captured_at: new Date(now).toISOString(),
+        captured_at: new Date(capturedAt).toISOString(),
       });
-
     if (insertErr) {
-      console.error("[capture-from-camera insert]", insertErr);
       return NextResponse.json({ error: `Capture row insert failed: ${insertErr.message}` }, { status: 500 });
     }
 
@@ -84,11 +72,13 @@ export async function POST(req: NextRequest) {
       id: captureId,
       camera_id: cameraId,
       label,
-      captured_at: now,
+      captured_at: capturedAt,
       public_url: pub.data.publicUrl,
     });
   } catch (err) {
-    console.error("[capture-from-camera]", err);
-    return NextResponse.json({ error: "server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "server error" },
+      { status: 500 },
+    );
   }
 }

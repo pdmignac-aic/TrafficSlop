@@ -13,3 +13,9 @@ export function getSupabaseAnonKey(): string {
   if (!raw) return "";
   return raw.trim().replace(/^["']|["']$/g, "");
 }
+
+export function getSupabaseServiceRoleKey(): string {
+  const raw = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!raw) return "";
+  return raw.trim().replace(/^["']|["']$/g, "");
+}

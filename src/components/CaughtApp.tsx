@@ -208,6 +208,7 @@ export default function CaughtApp() {
       }),
     });
     if (!ins.ok) {
+      const errorBody = (await ins.json().catch(() => ({}))) as { error?: string };
       const localRes = await fetch(imageProxyUrl(cam.id), { cache: "no-store" });
       if (!localRes.ok) throw new Error("save failed");
       const blob = await localRes.blob();
@@ -221,7 +222,7 @@ export default function CaughtApp() {
           imageDataUrl,
         }),
       );
-      setStatus("saved locally");
+      setStatus(errorBody.error ? `local only: ${errorBody.error}` : "saved locally");
       return;
     }
     const saved = (await ins.json()) as { id: string; public_url: string; captured_at: number };
