@@ -23,6 +23,12 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
             >
               Community
             </Link>
+            <Link
+              href="/merch"
+              className="text-[10px] uppercase tracking-[0.2em] text-[#5c6478]/70 hover:text-[#0b3b8c]/80"
+            >
+              Merch
+            </Link>
             <SignOutButton />
           </div>
         </div>

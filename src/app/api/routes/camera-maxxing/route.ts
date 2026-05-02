@@ -76,11 +76,42 @@ function toPlannedRoute(route: OsrmRoute, cameras: Camera[]): PlannedRoute {
   };
 }
 
+function offsetPoint(point: RoutePoint, bearingA: RoutePoint, bearingB: RoutePoint, meters: number): RoutePoint {
+  const metersPerLat = 111_320;
+  const metersPerLng = Math.cos((point.lat * Math.PI) / 180) * 111_320;
+  const dx = (bearingB.lng - bearingA.lng) * metersPerLng;
+  const dy = (bearingB.lat - bearingA.lat) * metersPerLat;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  const nx = -dy / len;
+  const ny = dx / len;
+  return {
+    lat: point.lat + (ny * meters) / metersPerLat,
+    lng: point.lng + (nx * meters) / metersPerLng,
+  };
+}
+
+function avoidanceWaypoints(origin: RoutePoint, destination: RoutePoint, normal: PlannedRoute): RoutePoint[][] {
+  const geometry = normal.geometry.length >= 3 ? normal.geometry : [origin, destination];
+  const mid = geometry[Math.floor(geometry.length / 2)];
+  const oneThird = geometry[Math.floor(geometry.length / 3)];
+  const twoThird = geometry[Math.floor((geometry.length * 2) / 3)];
+  const anchors = [
+    [mid],
+    [oneThird, twoThird],
+  ];
+  const distances = [350, 650, -350, -650];
+  return anchors.flatMap((anchorSet) =>
+    distances.map((meters) => anchorSet.map((p) => offsetPoint(p, origin, destination, meters))),
+  );
+}
+
 export async function GET(req: NextRequest) {
   try {
     const origin = parsePoint(req.nextUrl.searchParams.get("origin"));
     const destination = parsePoint(req.nextUrl.searchParams.get("destination"));
-    const aggressive = req.nextUrl.searchParams.get("preset") === "aggressive";
+    const preset = req.nextUrl.searchParams.get("preset") ?? "reasonable";
+    const aggressive = preset === "aggressive";
+    const slopShy = preset === "slop-shy";
 
     if (!origin || !destination) {
       return NextResponse.json({ error: "origin and destination must be lat,lng" }, { status: 400 });
@@ -89,6 +120,41 @@ export async function GET(req: NextRequest) {
     const cameras = await loadCameras();
     const normalOsrm = await fetchOsrmRoute([origin, destination]);
     const normal = toPlannedRoute(normalOsrm, cameras);
+
+    if (slopShy) {
+      const shyCandidates: { route: PlannedRoute; score: number }[] = [];
+      for (const detourPoints of avoidanceWaypoints(origin, destination, normal)) {
+        try {
+          const osrmRoute = await fetchOsrmRoute([origin, ...detourPoints, destination]);
+          const route = toPlannedRoute(osrmRoute, cameras);
+          const detourRatio = route.distanceMeters / Math.max(1, normal.distanceMeters);
+          const extraDurationSeconds = route.durationSeconds - normal.durationSeconds;
+          if (detourRatio > MAX_DETOUR_RATIO || extraDurationSeconds > MAX_EXTRA_SECONDS) continue;
+          shyCandidates.push({
+            route,
+            score:
+              (normal.cameras.length - route.cameras.length) * 1200 -
+              Math.max(0, detourRatio - 1) * 500 -
+              Math.max(0, extraDurationSeconds / 60) * 10,
+          });
+        } catch {
+          // Continue trying other avoidance probes.
+        }
+      }
+
+      const bestShy = shyCandidates.sort((a, b) => b.score - a.score)[0]?.route ?? normal;
+      const result: CameraMaxxingResult = {
+        origin,
+        destination,
+        normal,
+        maxxed: bestShy,
+        waypointCameras: [],
+        detourRatio: bestShy.distanceMeters / Math.max(1, normal.distanceMeters),
+        extraDistanceMeters: bestShy.distanceMeters - normal.distanceMeters,
+        extraDurationSeconds: bestShy.durationSeconds - normal.durationSeconds,
+      };
+      return NextResponse.json(result);
+    }
 
     const counts = aggressive ? [3, 5, 7] : [2, 4, 6];
     const candidateRoutes: { route: PlannedRoute; waypointCameras: Camera[]; score: number }[] = [];

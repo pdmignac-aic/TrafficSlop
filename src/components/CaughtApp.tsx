@@ -506,10 +506,11 @@ export default function CaughtApp() {
           Traffic Slop
         </p>
         <h1 className="text-2xl font-semibold tracking-tight text-[#1a1f2e]">
-          Street footage you didn&apos;t shoot.
+          Someone&apos;s been filming you.
         </h1>
         <p className="max-w-prose text-sm leading-relaxed text-[#5c6478]">
-          NYC DOT cams see you walk by. We grab the stills. You get the reel.
+          It&apos;s the city. It&apos;s been doing it for years. We just started saving it for
+          you. Or helping you avoid them.
         </p>
       </header>
 

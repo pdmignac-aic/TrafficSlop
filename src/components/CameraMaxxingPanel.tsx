@@ -15,6 +15,8 @@ type GeocodeResult = RoutePoint & {
   label: string;
 };
 
+type MaxxingPreset = "reasonable" | "aggressive" | "slop-shy";
+
 function miles(meters: number) {
   return (meters / 1609.344).toFixed(1);
 }
@@ -32,7 +34,7 @@ export default function CameraMaxxingPanel({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [destination, setDestination] = useState("");
-  const [preset, setPreset] = useState<"reasonable" | "aggressive">("reasonable");
+  const [preset, setPreset] = useState<MaxxingPreset>("reasonable");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,7 +86,7 @@ export default function CameraMaxxingPanel({
         <span>
           <span className="block text-xs font-semibold text-[#0b3b8c]">Try Camera Maxxing</span>
           <span className="mt-1 block text-[11px] text-[#5c6478]">
-            Plan a slightly weirder walk that passes more traffic cams.
+            Plan a weirder walk: hit more cameras, or route like a folk hero and dodge them.
           </span>
         </span>
         <span className="text-xs font-semibold text-[#0b3b8c]">{open ? "Hide" : "Plan"}</span>
@@ -102,7 +104,7 @@ export default function CameraMaxxingPanel({
             />
           </label>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => setPreset("reasonable")}
@@ -121,6 +123,15 @@ export default function CameraMaxxingPanel({
             >
               Aggressive
             </button>
+            <button
+              type="button"
+              onClick={() => setPreset("slop-shy")}
+              className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
+                preset === "slop-shy" ? "bg-[#0b3b8c] text-white" : "bg-[#f0ebe3] text-[#5c6478]"
+              }`}
+            >
+              Slop shy / folk hero route
+            </button>
           </div>
 
           <button
@@ -129,7 +140,7 @@ export default function CameraMaxxingPanel({
             onClick={() => void planRoute()}
             className="rounded-xl bg-[#0b3b8c] px-4 py-3 text-sm font-semibold text-white disabled:opacity-40"
           >
-            {busy ? "Maxxing…" : "Find camera-maxxed route"}
+            {busy ? "Maxxing…" : preset === "slop-shy" ? "Find slop-shy route" : "Find camera-maxxed route"}
           </button>
 
           {error ? <p className="text-xs leading-relaxed text-red-700">{error}</p> : null}
@@ -152,11 +163,19 @@ export default function CameraMaxxingPanel({
                   </p>
                 </div>
               </div>
-              <p className="text-[11px] leading-relaxed text-[#5c6478]">
-                Adds ~{minutes(Math.max(0, routePlan.extraDurationSeconds))} min and{" "}
-                {miles(Math.max(0, routePlan.extraDistanceMeters))} mi to pass{" "}
-                {Math.max(0, routePlan.maxxed.cameras.length - routePlan.normal.cameras.length)} more cameras.
-              </p>
+              {preset === "slop-shy" ? (
+                <p className="text-[11px] leading-relaxed text-[#5c6478]">
+                  Adds ~{minutes(Math.max(0, routePlan.extraDurationSeconds))} min and{" "}
+                  {miles(Math.max(0, routePlan.extraDistanceMeters))} mi to dodge{" "}
+                  {Math.max(0, routePlan.normal.cameras.length - routePlan.maxxed.cameras.length)} cameras.
+                </p>
+              ) : (
+                <p className="text-[11px] leading-relaxed text-[#5c6478]">
+                  Adds ~{minutes(Math.max(0, routePlan.extraDurationSeconds))} min and{" "}
+                  {miles(Math.max(0, routePlan.extraDistanceMeters))} mi to pass{" "}
+                  {Math.max(0, routePlan.maxxed.cameras.length - routePlan.normal.cameras.length)} more cameras.
+                </p>
+              )}
               <button
                 type="button"
                 disabled={commuteActive}
