@@ -159,12 +159,12 @@ export default function CaughtApp() {
   }, []);
 
   const captureFrame = useCallback(async (cam: Camera) => {
-    const res = await fetch(imageProxyUrl(cam.id), { cache: "no-store" });
-    if (!res.ok) throw new Error("Cam frame failed");
-    const blob = await res.blob();
     const now = Date.now();
 
     if (!HAS_CLOUD) {
+      const res = await fetch(imageProxyUrl(cam.id), { cache: "no-store" });
+      if (!res.ok) throw new Error("Cam frame failed");
+      const blob = await res.blob();
       const imageDataUrl = await blobToDataUrl(blob);
       const entry: RollEntry = {
         key: randomKey(),
@@ -182,6 +182,9 @@ export default function CaughtApp() {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
+      const res = await fetch(imageProxyUrl(cam.id), { cache: "no-store" });
+      if (!res.ok) throw new Error("Cam frame failed");
+      const blob = await res.blob();
       const imageDataUrl = await blobToDataUrl(blob);
       setRoll((prev) =>
         addRollEntry(prev, {
@@ -195,31 +198,39 @@ export default function CaughtApp() {
       return;
     }
 
-    const path = `${user.id}/${crypto.randomUUID()}.jpg`;
-    const { error: upErr } = await supabase.storage
-      .from("captures")
-      .upload(path, blob, { contentType: "image/jpeg", upsert: false });
-    if (upErr) throw new Error(upErr.message);
-
-    const ins = await fetch("/api/captures", {
+    const ins = await fetch("/api/captures/from-camera", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        storage_path: path,
         camera_id: cam.id,
         label: cam.name,
-        captured_at: String(now),
         commute_id: commuteIdRef.current,
       }),
     });
-    if (!ins.ok) throw new Error("save failed");
-    const saved = (await ins.json()) as { id: string; public_url: string };
+    if (!ins.ok) {
+      const localRes = await fetch(imageProxyUrl(cam.id), { cache: "no-store" });
+      if (!localRes.ok) throw new Error("save failed");
+      const blob = await localRes.blob();
+      const imageDataUrl = await blobToDataUrl(blob);
+      setRoll((prev) =>
+        addRollEntry(prev, {
+          key: randomKey(),
+          cameraId: cam.id,
+          label: cam.name,
+          capturedAt: now,
+          imageDataUrl,
+        }),
+      );
+      setStatus("saved locally");
+      return;
+    }
+    const saved = (await ins.json()) as { id: string; public_url: string; captured_at: number };
     const entry: RollEntry = {
       key: saved.id,
       dbId: saved.id,
       cameraId: cam.id,
       label: cam.name,
-      capturedAt: now,
+      capturedAt: saved.captured_at ?? now,
       imageDataUrl: saved.public_url,
     };
     setRoll((prev) => [entry, ...prev].slice(0, 200));

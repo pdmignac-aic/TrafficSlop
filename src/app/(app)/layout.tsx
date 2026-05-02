@@ -17,6 +17,12 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
               Montages
             </Link>
             <Link
+              href="/profile"
+              className="text-xs font-medium text-[#5c6478] hover:text-[#0b3b8c]"
+            >
+              Profile
+            </Link>
+            <Link
               href="/feed"
               className="text-[10px] uppercase tracking-[0.2em] text-[#5c6478]/70 hover:text-[#0b3b8c]/80"
               title="Community — not the main product"
